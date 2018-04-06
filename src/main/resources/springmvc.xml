@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+	<context:component-scan base-package="cn.com.yeqiuchang.controller" use-default-filters="false">
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	</context:component-scan>	
+	<!-- 设置默认配置方案 -->
+	<mvc:annotation-driven/>
+	<!-- 默认处理静态文件 -->
+	<mvc:default-servlet-handler/>
+	<!-- 配置spring容器处理静态资源的映射 -->
+	<mvc:resources location="/" mapping="/resources/**"/>
+	<mvc:resources location="classpath:/WEB-INF/html/" mapping="/resources/html/**"/>
+	<!-- 开启扫描AOP注解,动态代理   true为动态代理类，即CG动态代理-->
+	<aop:aspectj-autoproxy proxy-target-class="true"/>
+	 <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<!-- 前缀 -->
+		<property name="prefix">
+			<value>/WEB-INF/jsp/</value>
+		</property>
+		<!-- 后缀 -->
+		<property name="suffix">
+			<value>.jsp</value>
+		</property>
+	</bean>
+	
+</beans>

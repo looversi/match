@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.3.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+		http://www.springframework.org/schema/cache
+        http://www.springframework.org/schema/cache/spring-cache.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd">
+
+	<context:annotation-config/>
+	<!-- 自动扫描注入 -->
+	<context:component-scan base-package="cn.com.yeqiuchang">
+		<!-- spring容器不扫描@Controller的注解 -->
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+	</context:component-scan>
+	<!-- 开启扫描AOP注解,动态代理   true为动态代理类，即CG动态代理-->
+	<aop:aspectj-autoproxy proxy-target-class="true"/> 
+	<!-- 加载数据库配置文件 -->
+	<context:property-placeholder location="classpath:db.properties,classpath:redis.properties
+		"/>
+	    <!-- 导入spring-shiro.xml配置文件 -->
+    <import resource="classpath:spring-shiro.xml"/>
+	<!-- 开启Shiro注解 -->	
+	<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+          depends-on="lifecycleBeanPostProcessor"/>
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+
+	
+	
+	
+	
+	<!-- 配置数据源 -->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="${dataSource.driver}"/>
+		<property name="jdbcUrl" value="${dataSource.url}"/>
+		<property name="user" value="${dataSource.userName}"/>
+		<property name="password" value="${dataSource.password}"/>
+		<property name="maxPoolSize" value="30"/>
+        <property name="minPoolSize" value="3"/>
+        <!--关闭连接后不自动commit-->
+        <property name="autoCommitOnClose" value="false"/>
+        <!--获取连接超时时间-->
+        <property name="checkoutTimeout" value="10000"/>
+        <!--获取连接重试次数-->
+        <property name="acquireRetryAttempts" value="3"/>
+	</bean>
+	<!-- 配置sqlSessionFactory对象 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 指定数据源 -->
+		<property name="dataSource" ref="dataSource"/>
+		<property name="configLocation" value="classpath:mybatis.xml"/>
+		<property name="typeAliasesPackage" value="cn.com.yeqiuchang.domain"/>
+		<!-- 自动扫描map.xml文件 -->
+		<property name="mapperLocations" value="classpath:cn/com/yeqiuchang/mapper/*.xml"></property>
+			<!-- <array>
+				<value>classpath:yzl/resource/map/*.xml</value>
+			</array> -->
+		
+	</bean>
+	<!-- 自动扫描dao层 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+    <property name="basePackage" value="cn.com.yeqiuchang.dao"/>
+  
+   <!-- <property name="annotationClass" value="XXX"/> -->
+   
+	<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+	</bean>
+	<!-- 事务管理 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+	<!-- 启用支持annotation注解方式进行事务管理 -->
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+	<!-- 配置redis单机版 -->
+	<!-- redis数据源 -->
+	<bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">
+		<!-- 最大空闲数 -->
+		<property name="maxIdle" value="${redis.maxIdle}"/>
+		<property name="maxTotal" value="${redis.maxActive}"/>
+		<!-- 最长等待时间 -->
+		<property name="maxWaitMillis" value="${redis.maxWait}"/>
+		<!-- 返回连接时，检测连接是否成功 -->
+		<property name="testOnBorrow" value="${redis.testOnBorrow}"/>
+	</bean>
+	
+	<!--spring-redis连接池管理工厂  -->
+	<bean id="jedisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+		<!-- IP地址 -->
+		<property name="hostName" value="${redis.host}"/>
+		<!-- 端口号 -->
+		<property name="port" value="${redis.port}"/>
+		<!-- 超时时间 -->
+		<property name="timeout" value="${redis.timeout}"/>
+		<property name="poolConfig" ref="poolConfig"/>
+	</bean>
+	
+	
+	  <!-- redis 集群 -->
+    <!--  <bean id="redisClient" class="redis.clients.jedis.JedisCluster">
+          <constructor-arg name="nodes">
+              <bean class="redis.clients.jedis.HostAndPort">
+                <constructor-arg name="host" value="192.168.10.105"></constructor-arg>
+                <constructor-arg name="port" value="7002"></constructor-arg>
+            </bean>
+            <bean class="redis.clients.jedis.HostAndPort">
+                <constructor-arg name="host" value="192.168.10.77"></constructor-arg>
+                <constructor-arg name="port" value="7002"></constructor-arg>
+            </bean>
+          </constructor-arg>
+     </bean>  -->
+     
+     <!-- redis模板类，提供对缓存的增删改查 -->
+     <!-- 
+     <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+     	<property name="connectionFactory" ref="jedisConnectionFactory"/>
+     	<property name="keySerializer">
+     		<bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+     	</property>
+     	
+     	<property name="valueSerializer">
+     		<bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>
+     	</property>
+     	
+     </bean>
+      -->
+     <!-- strRedisTemplate -->
+     <!--  
+     <bean id="strRedisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">
+     	<property name="connectionFactory" ref="jedisConnectionFactory"/>
+     	<property name="keySerializer">
+     		<bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+     	</property>
+     	
+     	<property name="valueSerializer">
+     		<bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+     	</property>
+     	<property name="hashKeySerializer">
+     		<bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+     	</property>
+     </bean>
+      -->
+     <!-- 使用中间类解决RedisCache.jedisConnectionFactory的静态注入，从而使Mybatis实现第三方缓存 -->
+     
+     <bean  id="redisCacheTransfer" class="cn.com.yeqiuchang.utils.RedisCacheTransfer">  
+     	<property name="jedisConnectionFactory" ref="jedisConnectionFactory"/>
+     </bean>
+     		<!--End 单机版redis集成 -->
+    
+     
+     <!-- redis缓存管理对象 -->
+     <!--  
+     <bean id="cacheManager" class="org.springframework.data.redis.cache.RedisCacheManager">
+     	<constructor-arg index="0" ref="redisTemplate"/>
+     </bean>
+     -->
+       
+    <!-- spring自己的换管理器，这里定义了两个缓存位置名称 ，既注解中的value -->  
+    <!--  
+    <bean id="cacheManager" class="org.springframework.cache.support.SimpleCacheManager">  
+        <property name="caches">  
+            <set>  
+                <bean class="sysone.zr.com.utils.SpringRedisCache">  
+                    <property name="redisTemplate" ref="redisTemplate" />  
+                    <property name="name" value="lf_cache"/>  
+                </bean>  
+            </set>  
+        </property>  
+    </bean>  
+     -->
+     <!-- 开启Spring缓存 -->
+     <!-- 
+     <cache:annotation-driven cache-manager="cacheManager"/>
+      -->
+</beans>

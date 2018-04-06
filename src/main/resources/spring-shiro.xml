@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans  xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	
+	
+	
+	<!-- 凭证匹配器 -->  
+    <bean id="credentialsMatcher" class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">  
+        <!--  <constructor-arg ref="cacheManager" /> --> 
+        <property name="hashAlgorithmName" value="md5" />  
+        <property name="hashIterations" value="2" />  
+        <property name="storedCredentialsHexEncoded" value="true" />  
+    </bean>  
+	
+	<!-- 配置Realm -->
+	<bean id="myRealm" class="cn.com.yeqiuchang.service.Service.MyRealm">
+		<property name="credentialsMatcher" ref="credentialsMatcher"/>
+	</bean>
+	
+	<!-- 
+	<bean id="authenticator" class="org.apache.shiro.authc.pam.ModularRealmAuthenticator">
+		<property name="authenticationStrategy" value="org.apache.shiro.authc.pam.AtLeastOneSuccessfulStrategy"/>
+	</bean>
+	 -->
+	<!-- 安全管理器 -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="realm" ref="myRealm"/>
+		
+	</bean>
+	
+	<!-- 保证实现了Shiro内部lifecycle函数的bean执行 -->
+	<!-- 配置 Bean 后置处理器: 会自动的调用和 Spring 整合后各个组件的生命周期方法. -->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+    
+    <!-- 配置shiroFilter的核心 -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+    	<!-- Shiro的核心安全接口,这个属性是必须的 -->
+    	<property name="securityManager" ref="securityManager"/>
+    	<!-- 配置登陆页面 ,身份认证失败跳转到登录页面-->
+    	<property name="loginUrl" value="/login"/>
+    	<!-- 登陆成功后跳转的页面 -->
+        <property name="successUrl" value="/success"/>
+        <!-- 权限认证失败跳转的页面 -->
+        <property name="unauthorizedUrl" value="/unauthorized"/>
+        <!-- 具体配置需要拦截哪些 URL, 以及访问对应的 URL 时使用 Shiro 的什么 Filter 进行拦截.  -->
+        <property name="filterChainDefinitions">
+        	<value>
+        	 	 <!-- 配置登出: 使用 logout 过滤器 -->
+                /shiro-logout = logout
+                <!-- 匿名访问，即不需要登录 -->
+                /shiro-* = anon
+                /user.jsp = roles[user]
+                /admin.jsp = roles[admin]
+                /permission =perms["user:create"]
+        	
+        	
+        	</value>
+        
+        
+        </property>
+    
+    </bean>
+	
+</beans>
